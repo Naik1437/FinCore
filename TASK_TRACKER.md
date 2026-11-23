@@ -97,3 +97,4 @@
 - Ready for Task 2 implementation
 - Docker services verified working locally
 - Shared types provide type safety across services
+- Root `npm run dev` now starts web (Next.js 3000), API (Express 4000) and analytics (uvicorn); `services/analytics` is a Python project and is not an npm workspace

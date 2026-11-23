@@ -63,6 +63,7 @@
 - ✅ ESLint configuration with TypeScript support
 - ✅ Prettier configuration
 - ✅ TypeScript configs for all workspaces
+- ✅ Root `package.json` workspaces corrected (`apps/*`, `packages/*`; `services/analytics` is Python, not an npm workspace) and `dev` script starts web + API + analytics
 
 #### Documentation
 - ✅ Comprehensive README with architecture diagram

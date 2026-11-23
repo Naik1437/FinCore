@@ -5,14 +5,13 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "services/*",
     "packages/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:analytics\"",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
-    "dev:analytics": "npm run dev --workspace=services/analytics",
+    "dev:analytics": "cd services/analytics && python -m uvicorn app.main:app --reload",
     "build": "npm run build --workspaces",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=apps/api",
