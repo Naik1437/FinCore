@@ -1,0 +1,43 @@
+{
+  "name": "fincore",
+  "version": "1.0.0",
+  "description": "FinCore Digital Wallet, Ledger & Payment Processing Platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:analytics\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:analytics": "npm run dev --workspace=services/analytics",
+    "build": "npm run build --workspaces",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "build:analytics": "npm run build --workspace=services/analytics",
+    "lint": "npm run lint --workspaces",
+    "lint:web": "npm run lint --workspace=apps/web",
+    "lint:api": "npm run lint --workspace=apps/api",
+    "lint:analytics": "npm run lint --workspace=services/analytics",
+    "test": "npm run test --workspaces",
+    "test:web": "npm run test --workspace=apps/web",
+    "test:api": "npm run test --workspace=apps/api",
+    "test:analytics": "npm run test --workspace=services/analytics",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres redis"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.5.0"
+}

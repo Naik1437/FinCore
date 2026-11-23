@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fincore-postgres
+    environment:
+      POSTGRES_DB: fincore
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fincore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fincore-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: fincore-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fincore-network
+    restart: unless-stopped
+
+  # Optional: pgAdmin for database management
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: fincore-pgadmin
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@fincore.local
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   ports:
+  #     - "5050:80"
+  #   volumes:
+  #     - pgadmin_data:/var/lib/pgadmin
+  #   networks:
+  #     - fincore-network
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - postgres
+
+networks:
+  fincore-network:
+    driver: bridge
+    name: fincore-network
+
+volumes:
+  postgres_data:
+    name: fincore-postgres-data
+  redis_data:
+    name: fincore-redis-data
+  # pgadmin_data:
+  #   name: fincore-pgadmin-data
