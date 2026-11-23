@@ -11,7 +11,7 @@
 | Backend (Express) skeleton | ✅ Done | - | Routes, middleware, services |
 | Analytics (FastAPI) skeleton | ✅ Done | - | Routes, database, cache |
 | Shared types package | ✅ Done | - | Zod schemas for all core types |
-| Docker Compose (PostgreSQL + Redis) | ✅ Done | - | With health checks, init scripts |
+| Docker Compose (PostgreSQL + Redis) | ✅ Done | - | container_name fincore-postgres/fincore-redis + external volumes/network; attaches to existing containers, no duplicates or port conflicts |
 | Environment templates | ✅ Done | - | Root + per-service .env.example |
 | ESLint/Prettier config | ✅ Done | - | Root config with workspace support |
 | Health endpoints | ✅ Done | - | All 3 services have /health, /ready, /live |

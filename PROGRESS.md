@@ -50,7 +50,7 @@
 - ✅ Pagination and health check types
 
 #### Infrastructure
-- ✅ Docker Compose with PostgreSQL 16 and Redis 7
+- ✅ Docker Compose with PostgreSQL 17 and Redis 7
 - ✅ Database initialization script with full schema
 - ✅ Health checks for all containers
 - ✅ Named volumes for persistence

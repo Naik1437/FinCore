@@ -31,7 +31,7 @@ A production-ready, modular fintech platform built with modern technologies for 
 | Frontend | Next.js (App Router) | 14.x |
 | Backend | Node.js + Express | 20.x / 4.x |
 | Analytics | Python FastAPI | 3.11 / 0.109 |
-| Database | PostgreSQL | 16 |
+| Database | PostgreSQL | 17 |
 | Cache | Redis | 7 |
 | Language | TypeScript / Python | 5.4 / 3.11 |
 | Validation | Zod / Pydantic | 3.22 / 2.5 |

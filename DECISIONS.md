@@ -90,7 +90,7 @@ Use FastAPI with Pydantic v2, SQLAlchemy 2.0 async, and structlog.
 Need ACID-compliant database for financial data with strong consistency.
 
 ### Decision
-Use PostgreSQL 16 with:
+Use PostgreSQL 17 with:
 - UUID primary keys
 - Row-level locking for balance updates
 - Advisory locks for distributed coordination
