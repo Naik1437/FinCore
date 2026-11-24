@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-import redis.asyncio as redis
 
-from app.database import get_session
+from app.database import async_session_maker
 from app.cache import get_redis
 from app.config import settings
 
 router = APIRouter()
 
 
+@router.get("", include_in_schema=False)
 @router.get("/")
 async def health_check():
     checks = {
@@ -25,7 +24,7 @@ async def health_check():
     }
 
     try:
-        async with get_session() as session:
+        async with async_session_maker() as session:
             await session.execute(text("SELECT 1"))
         checks["services"]["database"] = "healthy"
     except Exception as e:
@@ -47,7 +46,7 @@ async def health_check():
 @router.get("/ready")
 async def readiness_check():
     try:
-        async with get_session() as session:
+        async with async_session_maker() as session:
             await session.execute(text("SELECT 1"))
         redis_client = get_redis()
         await redis_client.ping()

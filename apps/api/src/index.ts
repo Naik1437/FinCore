@@ -26,7 +26,7 @@ app.use(requestLogger);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.RATE_LIMIT_MAX ? parseInt(process.env.RATE_LIMIT_MAX, 10) : 1000,
   message: { error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -42,10 +42,14 @@ app.use((req: Request, res: Response, _next: NextFunction) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 FinCore API server running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+const isDirectExecution =
+  process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js');
+if (isDirectExecution && process.env.NODE_ENV !== 'test' && !process.env.FINCORE_TEST) {
+  app.listen(PORT, () => {
+    console.log(`🚀 FinCore API server running on http://localhost:${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/health`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
 export { app };
