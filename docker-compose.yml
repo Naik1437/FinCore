@@ -171,5 +171,7 @@ networks:
 volumes:
   fincore-postgres-data:
     external: true
+    name: fincore_pgdata
   fincore-redis-data:
     external: true
+    name: fincore_redisdata
