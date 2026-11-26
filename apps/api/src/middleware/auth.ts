@@ -24,6 +24,19 @@ declare global {
  * Leaves req.user undefined if no token header was provided.
  */
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+  // Public credential/session-establishment endpoints must ignore stale/expired Bearer headers
+  if (
+    req.method === 'POST' &&
+    (req.path === '/auth/login' ||
+      req.path === '/login' ||
+      req.path === '/auth/mfa/challenge' ||
+      req.path === '/mfa/challenge' ||
+      req.path === '/auth/refresh' ||
+      req.path === '/refresh')
+  ) {
+    return next();
+  }
+
   const authHeader = req.headers.authorization || req.headers['x-access-token'];
   if (!authHeader) {
     return next();

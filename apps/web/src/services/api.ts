@@ -47,7 +47,13 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     ...(options?.headers as Record<string, string>),
   };
 
-  if (token && !headers['Authorization']) {
+  const isPublicAuthEndpoint =
+    url === '/api/auth/login' ||
+    url === '/api/auth/mfa/challenge' ||
+    url === '/api/auth/refresh' ||
+    url === '/api/auth/register';
+
+  if (token && !headers['Authorization'] && !isPublicAuthEndpoint) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
