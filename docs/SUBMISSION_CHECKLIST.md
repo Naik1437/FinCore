@@ -85,8 +85,10 @@ Key system principles:
 
 ---
 
-## 5. Security & Governance Compliance
-- **RBAC**: Multi-role authorization (`customer`, `operations_analyst`, `finance_administrator`, `platform_administrator`).
-- **MFA**: Simulated TOTP secret generation, QR URL, and backup recovery codes.
-- **Production Hardening**: Demo persona auto-login and webhook simulator endpoints are strictly disabled in production environments (`NODE_ENV=production`).
+## 5. Security, Governance & Integration Boundaries
+- **RBAC**: Multi-role authorization (`customer`, `support_agent`, `operations_analyst`, `finance_administrator`, `platform_administrator`).
+- **MFA**: Standard RFC 6238 TOTP (`otpauth://` QR URL, 30-second window) and backup recovery codes; demo code `123456` is restricted to non-production/test environments.
+- **Production Hardening**: Demo persona auto-login (`*@fincore.internal`) and webhook simulator endpoints are strictly disabled in production (`NODE_ENV=production`), and `signingSecret` enforces high-entropy production secrets without dev fallbacks.
+- **Actual Local Integrations**: PostgreSQL 17, Redis 7, Mailpit SMTP/API (`localhost:1025`/`8025`), Nginx TLS 1.2/1.3 reverse proxy (`docker/nginx.conf`), and AES-256-CBC encrypted backup & isolated restore drill.
+- **Simulated / Optional External Sandboxes**: Stripe (`STRIPE_SECRET_KEY=sk_test_*`) and Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_PHONE`) adapters run in **synthetic fallback mode** by default at ₹0 cost until optional external test-mode credentials are supplied in `.env`.
 - **Zero Secrets**: Scanned and verified clean with 0 committed private keys or unmasked secrets.

@@ -164,6 +164,25 @@ services:
     networks:
       - fincore-network
 
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: fincore-nginx
+    profiles: ["https"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+    networks:
+      - fincore-network
+
 networks:
   fincore-network:
     external: true
