@@ -24,6 +24,7 @@ ENV INTERNAL_API_URL=${INTERNAL_API_URL}
 
 RUN npm run build --workspace=@fincore/shared
 RUN npm run build --workspace=@fincore/web
+RUN mkdir -p /app/apps/web/public
 
 # Stage 2: Production runner
 FROM node:20-alpine AS runner
