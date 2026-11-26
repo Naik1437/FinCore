@@ -40,7 +40,7 @@ export const TransactionSchema = z.object({
   currency: CurrencySchema,
   status: TransactionStatusSchema,
   description: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -52,7 +52,7 @@ export const CreateTransactionSchema = z.object({
   amount: z.number().positive(),
   currency: CurrencySchema.default('USD'),
   description: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;
 
@@ -105,7 +105,7 @@ export const HealthCheckSchema = z.object({
   uptime: z.number(),
   environment: z.string(),
   version: z.string(),
-  services: z.record(z.enum(['healthy', 'unhealthy', 'unknown'])),
+  services: z.record(z.string(), z.enum(['healthy', 'unhealthy', 'unknown'])),
 });
 export type HealthCheck = z.infer<typeof HealthCheckSchema>;
 

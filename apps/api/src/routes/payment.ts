@@ -24,7 +24,7 @@ const createIntentSchema = z.object({
     currency: z.string().length(3, 'Currency must be 3 characters').default('USD'),
     description: z.string().optional(),
     idempotencyKey: z.string().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

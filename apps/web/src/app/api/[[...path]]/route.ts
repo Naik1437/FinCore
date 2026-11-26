@@ -18,10 +18,11 @@ function getApiBase(): string {
 
 async function handleProxy(
   req: NextRequest,
-  { params }: { params: { path?: string[] } }
+  { params }: { params: Promise<{ path?: string[] }> }
 ): Promise<NextResponse> {
   const apiBase = getApiBase();
-  const pathSegments = params.path || [];
+  const resolvedParams = await params;
+  const pathSegments = resolvedParams.path || [];
   const targetPath = pathSegments.join('/');
   const search = req.nextUrl.search || '';
   const targetUrl = `${apiBase}/api/${targetPath}${search}`;

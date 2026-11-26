@@ -29,14 +29,14 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
     it('CurrencySchema: accepts 3-letter currency codes and rejects invalid length', () => {
       assert.strictEqual(CurrencySchema.parse('USD'), 'USD');
       assert.strictEqual(CurrencySchema.parse('EUR'), 'EUR');
-      assert.throws(() => CurrencySchema.parse('US'), /String must contain exactly 3 character/);
-      assert.throws(() => CurrencySchema.parse('USDD'), /String must contain exactly 3 character/);
+      assert.throws(() => CurrencySchema.parse('US'), /exactly 3 characters/);
+      assert.throws(() => CurrencySchema.parse('USDD'), /exactly 3 characters/);
     });
 
     it('WalletSchema: validates complete wallet records', () => {
       const validWallet = {
-        id: '11111111-1111-1111-1111-111111111111',
-        userId: '22222222-2222-2222-2222-222222222222',
+        id: '11111111-1111-4111-8111-111111111111',
+        userId: '22222222-2222-4111-8111-222222222222',
         currency: 'USD',
         balance: 1500.5,
         createdAt: '2026-01-01T00:00:00Z',
@@ -48,13 +48,13 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
 
       assert.throws(
         () => WalletSchema.parse({ ...validWallet, balance: -10 }),
-        /Number must be greater than or equal to 0/
+        />=0/
       );
     });
 
     it('CreateWalletSchema: applies default currency and zero initial balance', () => {
       const parsed = CreateWalletSchema.parse({
-        userId: '33333333-3333-3333-3333-333333333333',
+        userId: '33333333-3333-4111-8111-333333333333',
       });
       assert.strictEqual(parsed.currency, 'USD');
       assert.strictEqual(parsed.initialBalance, 0);
@@ -75,8 +75,8 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
 
     it('TransactionSchema: requires positive amount and valid UUIDs', () => {
       const validTx = {
-        id: '44444444-4444-4444-4444-444444444444',
-        walletId: '55555555-5555-5555-5555-555555555555',
+        id: '44444444-4444-4111-8111-444444444444',
+        walletId: '55555555-5555-4111-8111-555555555555',
         type: 'transfer',
         amount: 250.75,
         currency: 'USD',
@@ -88,11 +88,11 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
       assert.strictEqual(TransactionSchema.parse(validTx).amount, 250.75);
       assert.throws(
         () => TransactionSchema.parse({ ...validTx, amount: 0 }),
-        /Number must be greater than 0/
+        />0/
       );
       assert.throws(
         () => TransactionSchema.parse({ ...validTx, amount: -50 }),
-        /Number must be greater than 0/
+        />0/
       );
     });
 
@@ -102,9 +102,9 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
       assert.throws(() => LedgerEntryTypeSchema.parse('refund_type'));
 
       const validLedger = {
-        id: '66666666-6666-6666-6666-666666666666',
-        walletId: '77777777-7777-7777-7777-777777777777',
-        transactionId: '88888888-8888-8888-8888-888888888888',
+        id: '66666666-6666-4111-8111-666666666666',
+        walletId: '77777777-7777-4111-8111-777777777777',
+        transactionId: '88888888-8888-4111-8111-888888888888',
         entryType: 'credit',
         amount: 100.0,
         currency: 'USD',
@@ -118,8 +118,8 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
 
     it('CreateLedgerEntrySchema: defaults currency to USD', () => {
       const parsed = CreateLedgerEntrySchema.parse({
-        walletId: '77777777-7777-7777-7777-777777777777',
-        transactionId: '88888888-8888-8888-8888-888888888888',
+        walletId: '77777777-7777-4111-8111-777777777777',
+        transactionId: '88888888-8888-4111-8111-888888888888',
         entryType: 'debit',
         amount: 45.0,
       });
@@ -143,7 +143,7 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
 
     it('UserProfileSchema: validates user profile fields and defaults flags', () => {
       const profile = {
-        id: '99999999-9999-9999-9999-999999999999',
+        id: '99999999-9999-4111-8111-999999999999',
         email: 'alice@fincore.internal',
         fullName: 'Alice Developer',
         role: 'platform_administrator',
@@ -219,7 +219,7 @@ describe('FinCore Shared Package — Types and Schemas Verification', () => {
 
       assert.throws(
         () => PaginationSchema.parse({ limit: 500 }),
-        /Number must be less than or equal to 100/
+        /<=100/
       );
 
       const PagedWallets = PaginatedResponseSchema(WalletSchema);

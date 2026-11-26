@@ -13,7 +13,7 @@ const createHoldSchema = z.object({
     currency: z.string().length(3, 'Currency must be a 3-letter ISO code').default('USD'),
     reason: z.string().min(3, 'Hold reason must be at least 3 characters'),
     expiresInMinutes: z.number().positive().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

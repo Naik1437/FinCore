@@ -21,7 +21,7 @@ const createTransactionSchema = z.object({
     amount: z.number().positive(),
     currency: z.string().length(3).default('USD'),
     description: z.string().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 
