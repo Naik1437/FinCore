@@ -165,17 +165,20 @@ jobs:
           JWT_SECRET: fincore-ci-test-jwt-secret-min-32-chars-long
         run: |
           echo "Executing financial integrity validation gates..."
-          node --import tsx --test apps/api/src/__tests__/assessment03.test.ts
-          node --import tsx --test apps/api/src/__tests__/assessment07.test.ts
-          node --import tsx --test apps/api/src/__tests__/assessment08.test.ts
-          node --import tsx --test apps/api/src/__tests__/assessment09.test.ts
+          node --import tsx --test --test-concurrency=1 \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=junit --test-reporter-destination=apps/api/test-results.xml \
+            apps/api/src/__tests__/assessment03.test.ts \
+            apps/api/src/__tests__/assessment07.test.ts \
+            apps/api/src/__tests__/assessment08.test.ts \
+            apps/api/src/__tests__/assessment09.test.ts
 
       - name: Run Python Analytics Calculations & Risk Tests
         run: |
           cd services/analytics
           pip install --upgrade pip
           pip install -e ".[dev]"
-          pytest tests/test_calculations.py tests/test_risk.py
+          pytest --junitxml=test-results.xml tests/test_calculations.py tests/test_risk.py
 
       - name: Upload Test Results Artifact
         uses: actions/upload-artifact@v4
