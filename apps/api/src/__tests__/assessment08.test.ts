@@ -286,14 +286,22 @@ describe('FinCore Assessment 08 — Payment & Notification Integrations Test Sui
       const wBefore = await pool.query('SELECT balance FROM wallets WHERE id = $1', [testWalletId]);
       const balanceBefore = parseFloat(wBefore.rows[0].balance);
 
-      // 2. Insert completed transaction to be refunded ($30.00)
+      // 2. Insert completed transaction with balanced ledger entries to be refunded ($30.00)
       const txnRes = await pool.query(
         `INSERT INTO transactions (wallet_id, type, amount, currency, status, description)
-         VALUES ($1, 'payment', 30.0000, 'USD', 'completed', 'Completed charge to refund')
+         VALUES ($1, 'payment', 30.0000, 'USD', 'pending', 'Completed charge to refund')
          RETURNING id`,
         [testWalletId]
       );
       const chargeTxnId = txnRes.rows[0].id;
+      await pool.query(
+        `INSERT INTO ledger_entries (wallet_id, transaction_id, entry_type, amount, currency, balance_after, description)
+         VALUES
+           ($1, $2, 'debit', 30.0000, 'USD', $3, 'Charge debit'),
+           ($1, $2, 'credit', 30.0000, 'USD', $3, 'Settlement credit')`,
+        [testWalletId, chargeTxnId, balanceBefore]
+      );
+      await pool.query(`UPDATE transactions SET status = 'completed' WHERE id = $1`, [chargeTxnId]);
 
       const payload = {
         id: `evt_ref_${Date.now()}`,

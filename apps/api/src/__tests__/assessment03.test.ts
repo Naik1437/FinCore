@@ -43,6 +43,35 @@ describe('FinCore Assessment 03 — Double-Entry Ledger Database Integrity Test 
       });
     assert.strictEqual(walletRes.status, 201);
     testWalletId = walletRes.body.wallet.id;
+
+    // Seed a balanced double-entry hold+capture on a separate wallet so ledger_entries is non-empty on fresh CI databases
+    const seedWalletRes = await request(app)
+      .post('/api/wallets')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        userId: testUserId,
+        currency: 'USD',
+        initialBalance: 100.0,
+      });
+    assert.strictEqual(seedWalletRes.status, 201);
+    const seedWalletId = seedWalletRes.body.wallet.id;
+
+    const seedHoldRes = await request(app)
+      .post('/api/holds')
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({
+        walletId: seedWalletId,
+        amount: 50.0,
+        currency: 'USD',
+        reason: 'Assessment 03 setup double-entry seed',
+      });
+    assert.strictEqual(seedHoldRes.status, 201);
+
+    const seedCaptureRes = await request(app)
+      .post(`/api/holds/${seedHoldRes.body.hold.id}/capture`)
+      .set('Authorization', `Bearer ${staffToken}`)
+      .send({ description: 'Assessment 03 setup capture' });
+    assert.strictEqual(seedCaptureRes.status, 200);
   });
 
   // 1. Double-Entry Invariants and Historical Equilibrium
