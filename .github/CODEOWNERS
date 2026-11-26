@@ -1,0 +1,39 @@
+# FinCore Codeowners & Domain Responsibility Matrix
+# Financial Systems & Core Banking Change Governance
+
+# Global Platform & Security Architects
+* @fincore-admins @security-officer
+
+# Financial Core, Ledger & Double-Entry Accounting
+/apps/api/src/services/ledger.ts @financial-engineers @ledger-auditor
+/apps/api/src/services/consistencyEngine.ts @financial-engineers @concurrency-lead
+/apps/api/src/routes/ledger.ts @financial-engineers @ledger-auditor
+/scripts/init-db/ @financial-engineers @dba-team
+
+# Financial Identity, Authorization & RBAC
+/apps/api/src/middleware/auth.ts @security-officer @identity-team
+/apps/api/src/services/auth.ts @security-officer @identity-team
+/apps/api/src/routes/auth.ts @security-officer @identity-team
+
+# Payments, Settlements & Provider Integrations
+/apps/api/src/services/paymentProvider.ts @payment-engineers @financial-engineers
+/apps/api/src/services/notificationService.ts @payment-engineers
+/apps/api/src/routes/payment.ts @payment-engineers
+/apps/api/src/routes/settlement.ts @payment-engineers @ledger-auditor
+/apps/api/src/routes/webhook.ts @payment-engineers @security-officer
+
+# Quantitative Analytics, Risk Decision Engine & Calculations
+/services/analytics/ @quant-analysts @risk-team
+
+# Customer Frontend & Web UI
+/apps/web/ @frontend-team
+
+# Infrastructure, Docker & Deployment
+/docker-compose.yml @devops-lead
+/apps/api/Dockerfile @devops-lead
+/apps/web/Dockerfile @devops-lead
+/services/analytics/Dockerfile @devops-lead
+/.dockerignore @devops-lead
+
+# Repository Governance & CI/CD
+/.github/ @release-managers @fincore-admins

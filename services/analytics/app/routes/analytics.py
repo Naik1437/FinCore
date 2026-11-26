@@ -33,7 +33,7 @@ async def get_wallet_analytics(
 ):
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days)
-    
+
     return WalletAnalytics(
         wallet_id=wallet_id,
         total_transactions=0,
@@ -52,7 +52,7 @@ async def get_transaction_analytics(
 ):
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days)
-    
+
     return TransactionAnalytics(
         total_count=0,
         total_volume=0.0,
@@ -70,7 +70,7 @@ async def get_summary(
 ):
     end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days)
-    
+
     return {
         "period": {
             "start": start_date.isoformat(),

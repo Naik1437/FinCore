@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { Router } from 'express';
 import { pool } from '../services/database.js';
-import { redisClient } from '../services/redis.js';
+import { connectRedis, redisClient } from '../services/redis.js';
 
 export const healthRouter = Router();
 
@@ -27,6 +27,9 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
   }
 
   try {
+    if (!redisClient.isOpen) {
+      await connectRedis();
+    }
     await redisClient.ping();
     checks.services.redis = 'healthy';
   } catch (_error) {
@@ -41,6 +44,9 @@ healthRouter.get('/', async (_req: Request, res: Response) => {
 healthRouter.get('/ready', async (_req: Request, res: Response) => {
   try {
     await pool.query('SELECT 1');
+    if (!redisClient.isOpen) {
+      await connectRedis();
+    }
     await redisClient.ping();
     res.status(200).json({ status: 'ready' });
   } catch (_error) {

@@ -1,0 +1,33 @@
+name: 🐛 Financial Bug or Discrepancy Report
+description: Report a bug, ledger discrepancy, race condition, or calculation error
+labels: ["bug", "financial-bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue in FinCore. Do NOT include real credentials, bank details, or sensitive customer PII.
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Discrepancy or Defect Description
+      placeholder: "Describe the unexpected behavior or financial variance observed."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: "1. Create wallet with balance...\n2. Dispatch concurrent transfer...\n3. Observe..."
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Financial Severity Level
+      options:
+        - "P0 - Ledger Imbalance / Fund Loss Risk"
+        - "P1 - Double-Spend / Concurrency Vulnerability"
+        - "P2 - API Contract / Authorization Defect"
+        - "P3 - Minor UI / Cosmetic Variance"
+    validations:
+      required: true

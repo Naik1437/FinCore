@@ -5,6 +5,8 @@ interface HeaderProps {
   onRoleChange: (role: 'customer' | 'operations') => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  currentUser?: { email: string; role: string; fullName?: string; mfaEnabled?: boolean } | null;
+  onOpenAuth?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -12,6 +14,8 @@ export const Header: React.FC<HeaderProps> = ({
   onRoleChange,
   activeTab,
   onTabChange,
+  currentUser,
+  onOpenAuth,
 }) => {
   return (
     <header
@@ -153,12 +157,37 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <div className="hide-on-mobile">
               <span style={{ fontWeight: 600, color: 'var(--gray-900)' }}>
-                {currentRole === 'customer' ? 'Alex Morgan' : 'Sam Rivera'}
+                {currentUser?.fullName ||
+                  (currentRole === 'customer' ? 'Alex Morgan' : 'Sam Rivera')}
               </span>
               <div style={{ fontSize: '0.7rem', color: 'var(--gray-500)' }}>
-                {currentRole === 'customer' ? 'Simulated Customer' : 'Risk & Operations Analyst'}
+                {currentUser
+                  ? `Role: ${currentUser.role}`
+                  : currentRole === 'customer'
+                    ? 'Simulated Customer'
+                    : 'Risk & Operations Analyst'}
+                {currentUser?.mfaEnabled && ' • 🛡️ MFA'}
               </div>
             </div>
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                style={{
+                  padding: '0.375rem 0.625rem',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--gray-300)',
+                  backgroundColor: '#ffffff',
+                  color: 'var(--gray-700)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginLeft: '0.5rem',
+                }}
+              >
+                🔐 {currentUser ? 'Switch Role' : 'Sign In'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -178,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {[
             { id: 'overview', label: '📊 Overview & Wallets' },
-            { id: 'transfer', label: '💸 Send Funds' },
+            { id: 'transfers', label: '💸 Send Funds' },
             { id: 'transactions', label: '📜 History & Transactions' },
             { id: 'beneficiaries', label: '👥 Beneficiaries' },
             { id: 'disputes', label: '⚖️ Disputes' },

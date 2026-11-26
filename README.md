@@ -266,14 +266,33 @@ npm run test:analytics
 
 ## Deployment
 
+The Compose API runs in production mode. Supply distinct random values of at least
+32 characters for `JWT_SECRET`, `JWT_REFRESH_SECRET`, `WEBHOOK_SECRET`, and
+`ANALYTICS_SERVICE_TOKEN`. Restarting with new signing keys requires signing in
+again. PostgreSQL, Redis, and analytics are reachable on the Compose network.
+For native development, use a separate local Compose override that binds necessary
+dependency ports to loopback only.
+
+Compose expects the external `fincore-network`, `fincore-postgres-data`, and
+`fincore-redis-data` resources to exist. PostgreSQL applies `scripts/init-db` on
+an empty volume. For an existing database, run `npm run db:migrate --workspace
+@fincore/api` from a trusted environment with database access after testing the
+migrations on an isolated copy. The migration command includes the existing
+synthetic seed SQL. Existing historical journal exceptions need separate
+reconciliation against authoritative records.
+
+Statement calculation accepts `day_of_period` as a one-based posting day for
+each transaction. The average uses daily closing balances. If any transaction
+has no posting day, the average is returned as JSON `null`.
+
 ### Docker Production Build
 
 ```bash
 # Build all images
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+docker compose build
 
 # Start production stack
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose up -d
 ```
 
 ### Kubernetes

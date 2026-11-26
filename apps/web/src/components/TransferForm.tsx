@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import type { Beneficiary, Transaction, Wallet } from '../types';
 
@@ -8,6 +8,7 @@ interface TransferFormProps {
   selectedWalletId?: string;
   onTransferSuccess: (txn: Transaction, newBalance: number) => void;
   onNavigateToBeneficiaries: () => void;
+  onCloseReceipt?: () => void;
 }
 
 export const TransferForm: React.FC<TransferFormProps> = ({
@@ -16,6 +17,7 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   selectedWalletId,
   onTransferSuccess,
   onNavigateToBeneficiaries,
+  onCloseReceipt,
 }) => {
   const [sourceWalletId, setSourceWalletId] = useState<string>(
     selectedWalletId || (wallets.length > 0 ? wallets[0].id : '')
@@ -23,6 +25,26 @@ export const TransferForm: React.FC<TransferFormProps> = ({
   const [beneficiaryId, setBeneficiaryId] = useState<string>(
     beneficiaries.length > 0 ? beneficiaries[0].id : ''
   );
+
+  useEffect(() => {
+    if (selectedWalletId && wallets.some(w => w.id === selectedWalletId)) {
+      setSourceWalletId(selectedWalletId);
+    } else if (
+      wallets.length > 0 &&
+      (!sourceWalletId || !wallets.some(w => w.id === sourceWalletId))
+    ) {
+      setSourceWalletId(wallets[0].id);
+    }
+  }, [wallets, selectedWalletId]);
+
+  useEffect(() => {
+    if (
+      beneficiaries.length > 0 &&
+      (!beneficiaryId || !beneficiaries.some(b => b.id === beneficiaryId))
+    ) {
+      setBeneficiaryId(beneficiaries[0].id);
+    }
+  }, [beneficiaries]);
   const [amountStr, setAmountStr] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [step, setStep] = useState<'edit' | 'confirm'>('edit');
@@ -217,7 +239,10 @@ export const TransferForm: React.FC<TransferFormProps> = ({
               type="button"
               className="btn-primary"
               style={{ width: '100%' }}
-              onClick={() => setCompletedTxn(null)}
+              onClick={() => {
+                setCompletedTxn(null);
+                onCloseReceipt?.();
+              }}
             >
               Close Receipt
             </button>

@@ -151,7 +151,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Grant permissions (adjust as needed for production)
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO postgres;
+-- Bootstrap objects are owned by the configured PostgreSQL initialization role.

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AuthModal } from '../components/AuthModal';
 import { BeneficiaryManager } from '../components/BeneficiaryManager';
 import { DisputeManager } from '../components/DisputeManager';
 import { DisputeModal } from '../components/DisputeModal';
@@ -12,11 +13,13 @@ import { TransactionList } from '../components/TransactionList';
 import { TransferForm } from '../components/TransferForm';
 import { WalletCard } from '../components/WalletCard';
 import { api } from '../services/api';
-import type { Beneficiary, Dispute, Transaction, Wallet } from '../types';
+import type { Beneficiary, Dispute, Transaction, User, Wallet } from '../types';
 
 export default function Home() {
   const [role, setRole] = useState<'customer' | 'operations'>('customer');
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   // State
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -41,7 +44,13 @@ export default function Home() {
       ]);
 
       setWallets(walletData);
-      setSelectedWalletId(prev => prev || (walletData.length > 0 ? walletData[0].id : ''));
+      setSelectedWalletId(prev =>
+        prev && walletData.some(w => w.id === prev)
+          ? prev
+          : walletData.length > 0
+            ? walletData[0].id
+            : ''
+      );
       setBeneficiaries(benData);
       setTransactions(txData);
       setDisputes(disputeData);
@@ -75,6 +84,33 @@ export default function Home() {
         }}
         activeTab={activeTab}
         onTabChange={tab => setActiveTab(tab)}
+        currentUser={currentUser}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        currentUser={currentUser}
+        onAuthSuccess={user => {
+          setCurrentUser(user);
+          setSelectedWalletId('');
+          if (user.role !== 'customer') {
+            setRole('operations');
+            setActiveTab('operations');
+          } else {
+            setRole('customer');
+            setActiveTab('overview');
+          }
+          void fetchData();
+        }}
+        onLogout={() => {
+          void api.logout();
+          setCurrentUser(null);
+          setRole('customer');
+          setActiveTab('overview');
+          void fetchData();
+        }}
       />
 
       <main className="container" style={{ flex: 1, paddingBottom: '3rem' }}>
@@ -196,6 +232,8 @@ export default function Home() {
                   selectedWalletId={selectedWalletId}
                   onTransferSuccess={(_txn, _newBalance) => {
                     void fetchData();
+                  }}
+                  onCloseReceipt={() => {
                     setActiveTab('transactions');
                   }}
                   onNavigateToBeneficiaries={() => setActiveTab('beneficiaries')}

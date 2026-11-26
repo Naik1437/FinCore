@@ -7,11 +7,15 @@ export const reportRouter = Router();
 reportRouter.get('/statement', async (req, res: Response) => {
   try {
     const { walletId } = req.query as { walletId?: string };
-    
-    // Default to first active wallet if not specified
+
+    const customerId = req.user?.role === 'customer' ? req.user.id : null;
+    // Default to the first active wallet visible to the caller.
     let targetWalletId = walletId;
     if (!targetWalletId) {
-      const wRes = await pool.query('SELECT id FROM wallets WHERE status = $1 LIMIT 1', ['active']);
+      const wRes = await pool.query(
+        'SELECT id FROM wallets WHERE status = $1 AND ($2::uuid IS NULL OR user_id = $2) ORDER BY created_at LIMIT 1',
+        ['active', customerId]
+      );
       targetWalletId = wRes.rows[0]?.id;
     }
 
@@ -24,6 +28,9 @@ reportRouter.get('/statement', async (req, res: Response) => {
       return res.status(404).json({ error: 'Wallet not found' });
     }
     const wallet = walletRes.rows[0];
+    if (customerId && wallet.user_id !== customerId) {
+      return res.status(404).json({ error: 'Wallet not found' });
+    }
 
     const txnsRes = await pool.query(
       'SELECT * FROM transactions WHERE wallet_id = $1 ORDER BY created_at DESC',
@@ -82,7 +89,10 @@ reportRouter.get('/statement', async (req, res: Response) => {
 
 reportRouter.get('/summary', async (_req, res: Response) => {
   try {
-    const walletsCount = await pool.query('SELECT COUNT(*) as count FROM wallets WHERE status = $1', ['active']);
+    const walletsCount = await pool.query(
+      'SELECT COUNT(*) as count FROM wallets WHERE status = $1',
+      ['active']
+    );
     const txnsStats = await pool.query(`
       SELECT 
         COUNT(*) as total_count,
@@ -111,5 +121,102 @@ reportRouter.get('/summary', async (_req, res: Response) => {
     });
   } catch (_error) {
     res.status(500).json({ error: 'Failed to generate operations summary' });
+  }
+});
+
+const ANALYTICS_SERVICE_URL = process.env.ANALYTICS_SERVICE_URL || 'http://127.0.0.1:8000';
+
+reportRouter.get('/risk', async (_req, res: Response) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(`${ANALYTICS_SERVICE_URL}/api/v1/risk/summary`, {
+      headers: { 'x-analytics-token': process.env.ANALYTICS_SERVICE_TOKEN || '' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      return res.json(data);
+    }
+  } catch (_e) {
+    // Analytics service offline or unreachable, fall back to DB metrics
+  }
+
+  try {
+    const txCount = await pool.query('SELECT COUNT(*) as count FROM transactions');
+    const disputeCount = await pool.query('SELECT COUNT(*) as count FROM disputes');
+    const total = parseInt(txCount.rows[0]?.count || '0', 10);
+    const disputes = parseInt(disputeCount.rows[0]?.count || '0', 10);
+
+    return res.json({
+      total_evaluated: total,
+      tier_counts: {
+        LOW: Math.max(0, total - disputes),
+        MEDIUM: 0,
+        HIGH: disputes,
+        CRITICAL: 0,
+      },
+      critical_alerts: 0,
+      active_rules: 6,
+      disclaimer:
+        'Risk scores represent automated statistical decision support and algorithmic heuristics, not definitive legal proof of fraud or illicit activity.',
+    });
+  } catch (_err) {
+    return res.status(500).json({ error: 'Failed to retrieve risk summary' });
+  }
+});
+
+reportRouter.post('/risk/evaluate', async (req, res: Response) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(`${ANALYTICS_SERVICE_URL}/api/v1/risk/evaluate`, {
+      method: 'POST',
+      headers: {
+        'x-analytics-token': process.env.ANALYTICS_SERVICE_TOKEN || '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      return res.json(data);
+    }
+    const errData = await response.json().catch(() => ({}));
+    return res.status(response.status).json(errData);
+  } catch (_e) {
+    // In-process fallback rule evaluation
+    const amount = Number(req.body?.amount || 0);
+    const score = amount > 10000 ? 75 : amount > 5000 ? 45 : 15;
+    const tier = score >= 90 ? 'CRITICAL' : score >= 70 ? 'HIGH' : score >= 30 ? 'MEDIUM' : 'LOW';
+    return res.json({
+      transaction_id: req.body?.transaction_id || `TX-${Date.now()}`,
+      risk_score: score,
+      risk_tier: tier,
+      recommended_action:
+        score >= 90
+          ? 'REJECT'
+          : score >= 70
+            ? 'MANUAL_REVIEW'
+            : score >= 30
+              ? 'STEP_UP_AUTH'
+              : 'APPROVE',
+      factors: [
+        {
+          rule_id: 'RULE_FALLBACK',
+          factor_name: 'Amount Threshold Check',
+          score_contribution: score,
+          description: `Transaction amount of ${amount} evaluated via local fallback heuristics`,
+          raw_metric: amount,
+        },
+      ],
+      disclaimer:
+        'Risk scores represent automated statistical decision support and algorithmic heuristics, not definitive legal proof of fraud or illicit activity.',
+    });
   }
 });

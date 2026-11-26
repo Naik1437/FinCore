@@ -9,7 +9,7 @@
     "dev": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "node --import tsx --test src/__tests__/*.test.ts"
   },
   "dependencies": {
     "zod": "^3.22.4"

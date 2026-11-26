@@ -79,3 +79,19 @@ build/
 .vercel
 .netlify
 .turbo
+
+# Security, Sensitive Backups & Credentials
+backups/
+*.sql
+!scripts/init-db/*.sql
+*.sql.gz
+*.dump
+*.key
+*.crt
+*.csr
+docker/certs/
+certs/
+
+# Test Artifacts
+test-results/
+playwright-report/

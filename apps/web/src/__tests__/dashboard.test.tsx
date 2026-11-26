@@ -464,7 +464,6 @@ describe('Assessment 01 — Financial Customer Frontend Test Suite', () => {
         transactions: [
           {
             id: 'tx-stmt-1',
-            walletId: 'w-usd-100',
             type: 'deposit',
             amount: 1500.0,
             currency: 'USD',

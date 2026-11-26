@@ -2,25 +2,165 @@ services:
   postgres:
     image: postgres:17
     container_name: fincore-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: fincore
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-fincore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fincore_dev_password}
     volumes:
       - fincore-postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"
     networks:
       - fincore-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fincore -d fincore"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
     container_name: fincore-redis
+    restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
     volumes:
       - fincore-redis-data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - fincore-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  analytics:
+    build:
+      context: .
+      dockerfile: services/analytics/Dockerfile
+    container_name: fincore-analytics
+    restart: unless-stopped
+    environment:
+      - PORT=8000
+      - ANALYTICS_ENV=production
+      - ANALYTICS_SERVICE_TOKEN=${ANALYTICS_SERVICE_TOKEN}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=fincore
+      - DB_USER=${DB_USER:-fincore}
+      - DB_PASSWORD=${DB_PASSWORD:-fincore_dev_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-fincore}:${DB_PASSWORD:-fincore_dev_password}@postgres:5432/fincore
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fincore-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: fincore-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=fincore
+      - DB_USER=${DB_USER:-fincore}
+      - DB_PASSWORD=${DB_PASSWORD:-fincore_dev_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANALYTICS_SERVICE_TOKEN=${ANALYTICS_SERVICE_TOKEN}
+      - ANALYTICS_SERVICE_URL=http://analytics:8000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - CORS_ORIGIN=http://localhost:3000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      analytics:
+        condition: service_started
+    networks:
+      - fincore-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: fincore-worker
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/worker.js"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=fincore
+      - DB_USER=${DB_USER:-fincore}
+      - DB_PASSWORD=${DB_PASSWORD:-fincore_dev_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ANALYTICS_SERVICE_TOKEN=${ANALYTICS_SERVICE_TOKEN}
+      - ANALYTICS_SERVICE_URL=http://analytics:8000
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fincore-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - INTERNAL_API_URL=http://api:4000
+    container_name: fincore-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - INTERNAL_API_URL=http://api:4000
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+      - NEXT_PUBLIC_ANALYTICS_URL=http://localhost:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - fincore-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: fincore-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
     networks:
       - fincore-network
 

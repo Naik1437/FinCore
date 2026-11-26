@@ -8,19 +8,52 @@ import type {
   OperationsSummary,
   Statement,
   Transaction,
+  User,
   Wallet,
 } from '../types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const BASE_URL =
+  (typeof window === 'undefined' ? process.env.INTERNAL_API_URL : null) ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:4000';
+
+let currentAuthToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  currentAuthToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('fincore_access_token', token);
+    } else {
+      localStorage.removeItem('fincore_access_token');
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (currentAuthToken) return currentAuthToken;
+  if (typeof window !== 'undefined') {
+    currentAuthToken = localStorage.getItem('fincore_access_token');
+  }
+  return currentAuthToken;
+}
 
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const finalUrl = typeof window === 'undefined' ? `${BASE_URL}${url}` : url;
+  const token = getAuthToken();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(finalUrl, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers,
   });
 
   const data: unknown = await res.json().catch(() => ({}));
@@ -40,6 +73,83 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Authentication & Identity
+  async login(
+    email: string,
+    password: string
+  ): Promise<{
+    user?: User;
+    accessToken?: string;
+    refreshToken?: string;
+    mfaRequired?: boolean;
+    mfaToken?: string;
+  }> {
+    const data = await fetchJson<{
+      user?: User;
+      accessToken?: string;
+      refreshToken?: string;
+      mfaRequired?: boolean;
+      mfaToken?: string;
+    }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (data.accessToken) {
+      setAuthToken(data.accessToken);
+    }
+    return data;
+  },
+
+  async mfaChallenge(
+    mfaToken: string,
+    code: string
+  ): Promise<{
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    const data = await fetchJson<{
+      user: User;
+      accessToken: string;
+      refreshToken: string;
+    }>('/api/auth/mfa/challenge', {
+      method: 'POST',
+      body: JSON.stringify({ mfaToken, code }),
+    });
+    if (data.accessToken) {
+      setAuthToken(data.accessToken);
+    }
+    return data;
+  },
+
+  async mfaSetup(): Promise<{
+    secret: string;
+    backupCodes: string[];
+    otpauthUrl: string;
+    demoCode: string;
+  }> {
+    return await fetchJson('/api/auth/mfa/setup', { method: 'POST' });
+  },
+
+  async mfaVerify(code: string): Promise<{ success: boolean; message: string }> {
+    return await fetchJson('/api/auth/mfa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetchJson('/api/auth/logout', { method: 'POST' });
+    } finally {
+      setAuthToken(null);
+    }
+  },
+
+  async getMe(): Promise<{ user: User; wallets: Wallet[] }> {
+    return await fetchJson<{ user: User; wallets: Wallet[] }>('/api/auth/me');
+  },
+
   // Wallets
   async getWallets(): Promise<Wallet[]> {
     const data = await fetchJson<{ wallets: Wallet[] }>('/api/wallets');

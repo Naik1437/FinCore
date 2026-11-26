@@ -21,6 +21,7 @@
     "lint:api": "npm run lint --workspace=apps/api",
     "lint:analytics": "npm run lint --workspace=services/analytics",
     "test": "npm run test --workspaces",
+    "test:e2e": "playwright test",
     "test:web": "npm run test --workspace=apps/web",
     "test:api": "npm run test --workspace=apps/api",
     "test:analytics": "npm run test --workspace=services/analytics",
@@ -29,9 +30,11 @@
     "db:logs": "docker compose logs -f postgres redis"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "concurrently": "^8.2.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
+    "playwright": "^1.65.1",
     "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "^5.4.0"
   },

@@ -27,7 +27,7 @@ async def health_check():
         async with async_session_maker() as session:
             await session.execute(text("SELECT 1"))
         checks["services"]["database"] = "healthy"
-    except Exception as e:
+    except Exception:
         checks["services"]["database"] = "unhealthy"
         checks["status"] = "degraded"
 
@@ -35,7 +35,7 @@ async def health_check():
         redis_client = get_redis()
         await redis_client.ping()
         checks["services"]["redis"] = "healthy"
-    except Exception as e:
+    except Exception:
         checks["services"]["redis"] = "unhealthy"
         checks["status"] = "degraded"
 

@@ -7,10 +7,14 @@ import morgan from 'morgan';
 import { errorHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { apiRouter } from './routes/api.js';
+import { docsRouter } from './routes/docs.js';
 import { healthRouter } from './routes/health.js';
+import { connectRedis } from './services/redis.js';
 
 const app: Application = express();
 const PORT = process.env.PORT || 4000;
+
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(
@@ -20,7 +24,15 @@ app.use(
   })
 );
 app.use(morgan('combined'));
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buffer) => {
+      if (req.url?.split('?')[0] === '/api/webhooks/payments') {
+        (req as Request & { webhookRawBody?: string }).webhookRawBody = buffer.toString('utf8');
+      }
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
@@ -34,6 +46,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use('/health', healthRouter);
+app.use('/docs', docsRouter);
 app.use('/api', apiRouter);
 
 app.use((req: Request, res: Response, _next: NextFunction) => {
@@ -45,6 +58,9 @@ app.use(errorHandler);
 const isDirectExecution =
   process.argv[1]?.endsWith('index.ts') || process.argv[1]?.endsWith('index.js');
 if (isDirectExecution && process.env.NODE_ENV !== 'test' && !process.env.FINCORE_TEST) {
+  connectRedis().catch(err =>
+    console.warn('Redis initial connection deferred:', (err as Error).message)
+  );
   app.listen(PORT, () => {
     console.log(`🚀 FinCore API server running on http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);

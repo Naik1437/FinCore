@@ -23,7 +23,13 @@ export type CreateWallet = z.infer<typeof CreateWalletSchema>;
 export const TransactionTypeSchema = z.enum(['deposit', 'withdrawal', 'transfer', 'payment']);
 export type TransactionType = z.infer<typeof TransactionTypeSchema>;
 
-export const TransactionStatusSchema = z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const TransactionStatusSchema = z.enum([
+  'pending',
+  'processing',
+  'completed',
+  'failed',
+  'cancelled',
+]);
 export type TransactionStatus = z.infer<typeof TransactionStatusSchema>;
 
 export const TransactionSchema = z.object({
@@ -110,3 +116,58 @@ export const ApiErrorSchema = z.object({
   statusCode: z.number().int().positive(),
 });
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+
+export const RoleSchema = z.enum([
+  'customer',
+  'support_agent',
+  'operations_analyst',
+  'finance_administrator',
+  'platform_administrator',
+  'operations', // backwards compatible alias
+]);
+export type Role = z.infer<typeof RoleSchema>;
+
+export const UserProfileSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  fullName: z.string().optional(),
+  phone: z.string().optional(),
+  role: RoleSchema,
+  mfaEnabled: z.boolean().default(false),
+  isVerified: z.boolean().default(false),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+});
+export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+export const RegisterRequestSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  phone: z.string().optional(),
+  role: RoleSchema.optional().default('customer'),
+});
+export type RegisterRequest = z.infer<typeof RegisterRequestSchema>;
+
+export const LoginRequestSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1, 'Password is required'),
+});
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+
+export const RefreshTokenRequestSchema = z.object({
+  refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+export type RefreshTokenRequest = z.infer<typeof RefreshTokenRequestSchema>;
+
+export const MfaVerifyRequestSchema = z.object({
+  secret: z.string().min(1, 'MFA secret is required'),
+  code: z.string().length(6, 'Verification code must be 6 digits'),
+});
+export type MfaVerifyRequest = z.infer<typeof MfaVerifyRequestSchema>;
+
+export const MfaChallengeRequestSchema = z.object({
+  mfaToken: z.string().min(1, 'MFA challenge token is required'),
+  code: z.string().min(6, 'Verification code or backup code is required'),
+});
+export type MfaChallengeRequest = z.infer<typeof MfaChallengeRequestSchema>;

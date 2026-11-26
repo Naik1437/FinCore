@@ -4,6 +4,30 @@ export type TransactionStatus = 'pending' | 'processing' | 'completed' | 'failed
 export type DisputeStatus = 'pending_review' | 'under_investigation' | 'resolved' | 'rejected';
 export type LedgerEntryType = 'debit' | 'credit';
 
+export type UserRole =
+  | 'customer'
+  | 'support_agent'
+  | 'operations_analyst'
+  | 'finance_administrator'
+  | 'platform_administrator'
+  | 'operations';
+
+export interface User {
+  id: string;
+  email: string;
+  fullName?: string;
+  phone?: string;
+  role: UserRole;
+  mfaEnabled: boolean;
+  isVerified?: boolean;
+}
+
+export interface AuthSession {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
 export interface Wallet {
   id: string;
   userId: string;

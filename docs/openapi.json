@@ -1,0 +1,623 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "FinCore Banking, Ledger & Payment API",
+    "version": "1.0.0",
+    "description": "Comprehensive financial REST APIs for FinCore: Double-Entry Ledger, Digital Wallets, Real-time Transfers, Risk Engine, Payment Webhooks, and RBAC Authorization.",
+    "contact": {
+      "name": "FinCore Engineering & Security Team",
+      "email": "security@fincore.internal"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Pass JWT access token issued by /api/auth/login or /api/auth/register"
+      },
+      "WebhookHmacSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "fincore-signature",
+        "description": "HMAC-SHA256 signature header format: t={timestamp},v1={hex_signature}"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "example": "Validation Error" },
+          "message": { "type": "string", "example": "Transfer amount must be strictly greater than 0" },
+          "statusCode": { "type": "integer", "example": 400 },
+          "details": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d" },
+          "email": { "type": "string", "format": "email", "example": "alex.customer@example.com" },
+          "fullName": { "type": "string", "example": "Alex Mercer" },
+          "phone": { "type": "string", "example": "+15551234567" },
+          "isVerified": { "type": "boolean", "example": true },
+          "role": { "type": "string", "enum": ["customer", "support_agent", "operations_analyst", "finance_admin", "platform_admin"], "example": "customer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e" },
+          "userId": { "type": "string", "format": "uuid" },
+          "currency": { "type": "string", "enum": ["USD", "EUR", "GBP", "JPY", "CAD", "AUD"], "example": "USD" },
+          "balance": { "type": "string", "example": "1250.5000", "description": "High-precision 4-decimal NUMERIC(18, 4)" },
+          "heldBalance": { "type": "string", "example": "50.0000" },
+          "status": { "type": "string", "enum": ["active", "suspended", "frozen"], "example": "active" }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "walletId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["deposit", "withdrawal", "transfer", "payment"] },
+          "amount": { "type": "string", "example": "100.0000" },
+          "currency": { "type": "string", "example": "USD" },
+          "status": { "type": "string", "enum": ["pending", "processing", "completed", "failed", "cancelled"] },
+          "description": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Beneficiary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "Alice Recipient" },
+          "accountNumber": { "type": "string", "example": "US1234567890123456" },
+          "bankName": { "type": "string", "example": "FinCore Settlement Bank" },
+          "currency": { "type": "string", "example": "USD" },
+          "status": { "type": "string", "example": "active" }
+        }
+      },
+      "Hold": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "walletId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string", "example": "50.0000" },
+          "currency": { "type": "string", "example": "USD" },
+          "status": { "type": "string", "enum": ["active", "settled", "released"] },
+          "reason": { "type": "string", "example": "Card preauthorization" }
+        }
+      },
+      "Dispute": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "transactionId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "reason": { "type": "string", "example": "Unauthorized charge" },
+          "status": { "type": "string", "enum": ["opened", "under_review", "resolved", "rejected"] },
+          "amount": { "type": "string", "example": "45.0000" }
+        }
+      },
+      "LedgerEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "transactionId": { "type": "string", "format": "uuid" },
+          "entryType": { "type": "string", "enum": ["debit", "credit"] },
+          "accountType": { "type": "string", "enum": ["customer_wallet", "settlement_treasury", "fee_income"] },
+          "accountId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "string", "example": "100.0000" },
+          "currency": { "type": "string", "example": "USD" },
+          "status": { "type": "string", "enum": ["posted", "reversed", "pending"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "System Health Check",
+        "tags": ["System"],
+        "responses": {
+          "200": { "description": "System components healthy" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a new customer account",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "fullName", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "customer@example.com" },
+                  "fullName": { "type": "string", "example": "Jane Doe" },
+                  "password": { "type": "string", "example": "SecurePass123!" },
+                  "phone": { "type": "string", "example": "+15559876543" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Account and default wallet provisioned" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Email already registered" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Authenticate user and issue JWT tokens",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "customer@example.com" },
+                  "password": { "type": "string", "example": "SecurePass123!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Authenticated successfully, returns accessToken and refreshToken" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/mfa/generate": {
+      "post": {
+        "summary": "Generate simulated TOTP MFA secret & QR",
+        "tags": ["Authentication"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Returns MFA secret and backup codes" }
+        }
+      }
+    },
+    "/api/auth/mfa/setup": {
+      "post": {
+        "summary": "Generate simulated TOTP MFA secret & QR",
+        "tags": ["Authentication"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Returns MFA secret and backup codes" }
+        }
+      }
+    },
+    "/api/auth/mfa/verify": {
+      "post": {
+        "summary": "Verify TOTP MFA code and enable MFA",
+        "tags": ["Authentication"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "MFA verified and activated" },
+          "400": { "description": "Invalid MFA code" }
+        }
+      }
+    },
+    "/api/accounts": {
+      "get": {
+        "summary": "List accounts (RBAC: Operations/Admin)",
+        "tags": ["Accounts"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of user accounts" }
+        }
+      },
+      "post": {
+        "summary": "Create user account",
+        "tags": ["Accounts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "fullName"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "fullName": { "type": "string" },
+                  "phone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Account created" }
+        }
+      }
+    },
+    "/api/wallets": {
+      "get": {
+        "summary": "List wallets for user",
+        "tags": ["Wallets"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of wallets" }
+        }
+      },
+      "post": {
+        "summary": "Create or provision a multi-currency wallet",
+        "tags": ["Wallets"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "currency"],
+                "properties": {
+                  "userId": { "type": "string", "format": "uuid" },
+                  "currency": { "type": "string", "example": "USD" },
+                  "initialBalance": { "type": "number", "example": 100.0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Wallet provisioned" }
+        }
+      }
+    },
+    "/api/wallets/{id}": {
+      "get": {
+        "summary": "Get wallet details by ID",
+        "tags": ["Wallets"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Wallet details" },
+          "404": { "description": "Wallet not found" }
+        }
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "summary": "List transaction history with pagination",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "walletId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated transaction list" }
+        }
+      }
+    },
+    "/api/transactions/transfer": {
+      "post": {
+        "summary": "Execute atomic transfer with double-entry ledger & concurrency lock",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sourceWalletId", "beneficiaryId", "amount", "description"],
+                "properties": {
+                  "sourceWalletId": { "type": "string", "format": "uuid" },
+                  "beneficiaryId": { "type": "string", "format": "uuid" },
+                  "amount": { "type": "number", "example": 25.50 },
+                  "description": { "type": "string", "example": "Dinner reimbursement" },
+                  "idempotencyKey": { "type": "string", "example": "X-IDEMP-99214" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Transfer executed atomically" },
+          "400": { "description": "Insufficient funds or invalid input" },
+          "403": { "description": "Ownership violation: You do not own the source wallet" }
+        }
+      }
+    },
+    "/api/transactions/{id}/refund": {
+      "post": {
+        "summary": "Refund or reverse completed transaction",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["reason"],
+                "properties": {
+                  "reason": { "type": "string", "example": "Customer return" },
+                  "amount": { "type": "number", "example": 25.50 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Compensating refund recorded" }
+        }
+      }
+    },
+    "/api/beneficiaries": {
+      "get": {
+        "summary": "List beneficiaries",
+        "tags": ["Beneficiaries"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of saved beneficiaries" }
+        }
+      },
+      "post": {
+        "summary": "Add a new beneficiary",
+        "tags": ["Beneficiaries"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "name", "accountNumber", "bankName"],
+                "properties": {
+                  "userId": { "type": "string", "format": "uuid" },
+                  "name": { "type": "string", "example": "Alice Recipient" },
+                  "accountNumber": { "type": "string", "example": "US1234567890123456" },
+                  "bankName": { "type": "string", "example": "FinCore Settlement Bank" },
+                  "currency": { "type": "string", "example": "USD" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Beneficiary saved" }
+        }
+      }
+    },
+    "/api/holds": {
+      "get": {
+        "summary": "List wallet holds",
+        "tags": ["Holds"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of active/settled holds" }
+        }
+      },
+      "post": {
+        "summary": "Create hold on wallet funds",
+        "tags": ["Holds"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["walletId", "amount", "reason"],
+                "properties": {
+                  "walletId": { "type": "string", "format": "uuid" },
+                  "amount": { "type": "number", "example": 50.0 },
+                  "reason": { "type": "string", "example": "Card Preauth" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Hold created" }
+        }
+      }
+    },
+    "/api/settlements": {
+      "get": {
+        "summary": "List multi-entity clearing settlements",
+        "tags": ["Settlements"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of settlements" }
+        }
+      }
+    },
+    "/api/ledger/entries": {
+      "get": {
+        "summary": "Query immutable double-entry ledger entries",
+        "tags": ["Ledger"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "transactionId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Balanced ledger entries" }
+        }
+      }
+    },
+    "/api/disputes": {
+      "get": {
+        "summary": "List customer disputes",
+        "tags": ["Disputes"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Disputes list" }
+        }
+      },
+      "post": {
+        "summary": "File a dispute on a transaction",
+        "tags": ["Disputes"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["transactionId", "reason"],
+                "properties": {
+                  "transactionId": { "type": "string", "format": "uuid" },
+                  "reason": { "type": "string", "example": "Fraudulent charge" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Dispute opened" }
+        }
+      }
+    },
+    "/api/statements": {
+      "get": {
+        "summary": "Generate periodic account statement",
+        "tags": ["Statements"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "walletId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "period", "in": "query", "schema": { "type": "string", "example": "2026-11" } }
+        ],
+        "responses": {
+          "200": { "description": "Generated financial statement" }
+        }
+      }
+    },
+    "/api/ledger/reconciliation": {
+      "get": {
+        "summary": "Execute double-entry ledger reconciliation report",
+        "tags": ["Reports"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Ledger reconciliation report with zero-discrepancy status" }
+        }
+      }
+    },
+    "/api/reports/reconciliation": {
+      "get": {
+        "summary": "Execute double-entry ledger reconciliation report",
+        "tags": ["Reports"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Ledger reconciliation report with zero-discrepancy status" }
+        }
+      }
+    },
+    "/api/payments/intents": {
+      "post": {
+        "summary": "Create simulated payment intent",
+        "tags": ["Payments"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["walletId", "amount"],
+                "properties": {
+                  "walletId": { "type": "string", "format": "uuid" },
+                  "amount": { "type": "number", "example": 75.0 },
+                  "currency": { "type": "string", "example": "USD" },
+                  "description": { "type": "string", "example": "Merchant purchase" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Payment intent created with status pending" }
+        }
+      }
+    },
+    "/api/webhooks/payments": {
+      "post": {
+        "summary": "Ingest signed payment provider webhook event",
+        "tags": ["Webhooks"],
+        "security": [{ "WebhookHmacSignature": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "type", "created", "data"],
+                "properties": {
+                  "id": { "type": "string", "example": "evt_charge_12345" },
+                  "type": { "type": "string", "enum": ["payment_intent.succeeded", "payment_intent.payment_failed", "charge.refunded"] },
+                  "created": { "type": "integer", "example": 1700000000 },
+                  "data": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Webhook received, verified and processed (or deduplicated)" },
+          "400": { "description": "Invalid signature, missing header or expired replay window" }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Query audit logs of email and SMS notifications",
+        "tags": ["Notifications"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "userId", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Array of delivered/attempted notification events" }
+        }
+      }
+    }
+  }
+}

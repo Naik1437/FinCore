@@ -1,0 +1,36 @@
+name: 🔒 Financial Change Request (RFC)
+description: Propose a financial feature, ledger schema modification, or transaction engine change
+labels: ["financial-change", "needs-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out this Financial RFC carefully. Any changes impacting ledger balance, transaction flow, or risk rules must follow change governance procedures.
+  - type: input
+    id: assessment_ref
+    attributes:
+      label: Assessment / Milestone Reference
+      placeholder: "e.g. Assessment 10: Git & Change Governance"
+    validations:
+      required: true
+  - type: textarea
+    id: financial_impact
+    attributes:
+      label: Financial Impact & Ledger Scope
+      description: Describe which financial tables, balances, or transaction types are modified.
+      placeholder: "Modifies transfer state machine, reserves holds on wallet, inserts balanced journal entries."
+    validations:
+      required: true
+  - type: checkboxes
+    id: audit_requirements
+    attributes:
+      label: Audit & Risk Compliance Requirements
+      options:
+        - label: Preserves double-entry balance equilibrium
+          required: true
+        - label: Guarantees immutable append-only ledger entries
+          required: true
+        - label: Enforces concurrency locks and idempotency
+          required: true
+        - label: Verified with synthetic test data only
+          required: true

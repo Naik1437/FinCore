@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { createClient, RedisClientType } from 'redis';
+import type { RedisClientType } from 'redis';
+import { createClient } from 'redis';
 
 export const redisClient: RedisClientType = createClient({
   socket: {
