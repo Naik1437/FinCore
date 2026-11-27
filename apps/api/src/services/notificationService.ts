@@ -130,8 +130,9 @@ export class NotificationService {
 
     // 2. Twilio SMS Sandbox Dispatch (Official test credentials & magic numbers)
     const providerMetadata: Record<string, any> = { ...data };
-    const twilioSid = process.env.TWILIO_ACCOUNT_SID?.trim();
-    const twilioAuth = process.env.TWILIO_AUTH_TOKEN?.trim();
+    const externalDisabled = process.env.DISABLE_EXTERNAL_SANDBOXES === 'true';
+    const twilioSid = externalDisabled ? undefined : process.env.TWILIO_ACCOUNT_SID?.trim();
+    const twilioAuth = externalDisabled ? undefined : process.env.TWILIO_AUTH_TOKEN?.trim();
     if (channel === 'sms' && status === 'delivered' && twilioSid && twilioAuth) {
       try {
         const auth = Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');

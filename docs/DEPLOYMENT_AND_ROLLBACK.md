@@ -2,6 +2,20 @@
 
 ## 1. Zero-Downtime Deployment Architecture
 
+## Demo Gate Setup
+
+The optional HTTPS Nginx profile requires these local-only files under `docker/certs/`:
+
+- `fincore.crt` and `fincore.key` for TLS.
+- `.htpasswd` containing the demo username and bcrypt/crypt password hash.
+- `gate_map.conf` mapping the HttpOnly cookie value to `1`.
+- `gate_set_cookie.conf` issuing the matching Secure, HttpOnly cookie.
+
+These files are intentionally git-ignored. Create or provision them before starting
+the `https` Compose profile; never commit the credentials, cookie value, private key,
+or certificate. The `/_gate` endpoint must be challenged with Basic Auth before it
+issues the dashboard cookie.
+
 FinCore financial services employ a **Blue/Green (or Canary Rolling)** deployment strategy to ensure continuous availability, ledger safety, and zero data loss during production upgrades.
 
 ```
@@ -80,3 +94,15 @@ Record the incident in `docs/FINANCIAL_CHANGE_AUDIT.md` with:
 - Root cause analysis (RCA).
 - Affected account IDs and ledger balance impact.
 - Corrective actions and test additions.
+
+## Verified Deployment Status
+
+- Local Docker HTTPS and authenticated demo access verified.
+- Temporary Cloudflare HTTPS demonstration completed; tunnel stopped.
+- Permanent cloud hosting and trusted origin TLS remain pending.
+- Demo gate currently uses a temporary SHA-1 password hash for local testing; replace with bcrypt before public exposure.
+- Stripe and Twilio external dispatch disabled for public demo safety.
+- Stripe webhook verification used a locally generated signed event.
+- Twilio trial accepted the notification; final delivery remains unverified.
+- Previously exposed provider credentials require rotation before reuse.
+- Production deployment and zero-downtime operation are not independently verified.

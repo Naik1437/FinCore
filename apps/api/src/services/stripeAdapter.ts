@@ -29,6 +29,7 @@ export class StripeSandboxAdapter {
    * Returns true only when a valid Stripe test key is configured.
    */
   public static isConfigured(): boolean {
+    if (process.env.DISABLE_EXTERNAL_SANDBOXES === 'true') return false;
     const key = this.secretKey;
     if (!key) return false;
     if (
