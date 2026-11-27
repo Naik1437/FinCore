@@ -89,6 +89,11 @@ Key system principles:
 - **RBAC**: Multi-role authorization (`customer`, `support_agent`, `operations_analyst`, `finance_administrator`, `platform_administrator`).
 - **MFA**: Standard RFC 6238 TOTP (`otpauth://` QR URL, 30-second window) and backup recovery codes; demo code `123456` is restricted to non-production/test environments.
 - **Production Hardening**: Demo persona auto-login (`*@fincore.internal`) and webhook simulator endpoints are strictly disabled in production (`NODE_ENV=production`), and `signingSecret` enforces high-entropy production secrets without dev fallbacks.
-- **Actual Local Integrations**: PostgreSQL 17, Redis 7, Mailpit SMTP/API (`localhost:1025`/`8025`), Nginx TLS 1.2/1.3 reverse proxy (`docker/nginx.conf`), and AES-256-CBC encrypted backup & isolated restore drill.
-- **Simulated / Optional External Sandboxes**: Stripe (`STRIPE_SECRET_KEY=sk_test_*`) and Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_PHONE`) adapters run in **synthetic fallback mode** by default at ₹0 cost until optional external test-mode credentials are supplied in `.env`.
+- **Actual Local & Sandbox Integrations**:
+  - **PostgreSQL 17, Redis 7, Mailpit SMTP/API** (`localhost:1025`/`8025`), **Nginx TLS 1.2/1.3** (`docker/nginx.conf`), and **AES-256-CBC encrypted backup & isolated restore drill**.
+  - **Stripe Test Mode (`rkcs_test_`)**: Verified live PaymentIntent creation (`pi_3UgGx9PncivR7NV40rOlbnNE`) and confirmation (`pm_card_visa` → `status: succeeded`, `12.50 USD`), reconciled to transaction `aa3aca8e-c6d3-45c9-9812-b774c239260e` (`completed`, `0` unbalanced ledger entries).
+    - *Webhook Boundary*: Locally signed `stripe-signature` webhooks (`WEBHOOK_SECRET` HMAC-SHA256) are verified for valid acceptance, invalid rejection (`400`), and idempotent deduplication; live Stripe Dashboard webhook delivery to `localhost` requires a claimed Stripe account and public HTTPS endpoint.
+  - **Twilio Trial SMS**: Verified live API dispatch (`HTTP 201`, Message SID `SM7d6a5839aa763d88bfbdd402e320fe6c`, `provider: twilio_trial`, `twilioStatus: queued`).
+    - *Trial Restriction*: Limited Twilio Trial accounts restrict `Body` to predefined console templates (`sms_appointment_reminders`, otherwise returning `572006`), and `queued` responses are persisted as `status: 'queued'` rather than `'delivered'` until confirmed.
+  - **Simulated Fallbacks**: When external credentials are omitted, Stripe and Twilio adapters fall back to synthetic providers at ₹0 cost.
 - **Zero Secrets**: Scanned and verified clean with 0 committed private keys or unmasked secrets.

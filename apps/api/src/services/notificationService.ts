@@ -129,28 +129,57 @@ export class NotificationService {
     }
 
     // 2. Twilio SMS Sandbox Dispatch (Official test credentials & magic numbers)
+    const providerMetadata: Record<string, any> = { ...data };
     const twilioSid = process.env.TWILIO_ACCOUNT_SID?.trim();
     const twilioAuth = process.env.TWILIO_AUTH_TOKEN?.trim();
     if (channel === 'sms' && status === 'delivered' && twilioSid && twilioAuth) {
       try {
         const auth = Buffer.from(`${twilioSid}:${twilioAuth}`).toString('base64');
         const fromNumber = process.env.TWILIO_FROM_PHONE || '+15005550006'; // Official Twilio magic test number
+        const trialTemplate =
+          (typeof data.twilioTrialTemplate === 'string' && data.twilioTrialTemplate.trim()) ||
+          process.env.TWILIO_TRIAL_TEMPLATE?.trim() ||
+          '';
+        const smsBody = trialTemplate || body;
         const smsParams = new URLSearchParams({
           From: fromNumber,
           To: recipient,
-          Body: body,
+          Body: smsBody,
         });
-        await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: smsParams.toString(),
-          signal: AbortSignal.timeout(3000),
-        }).catch(() => {});
-      } catch (_e) {
-        // Graceful fallback to internal DB persistence
+        const twilioRes = await fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${auth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: smsParams.toString(),
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+        const twilioJson = (await twilioRes.json().catch(() => ({}))) as Record<string, any>;
+        providerMetadata.provider = trialTemplate ? 'twilio_trial' : 'twilio_sandbox';
+        if (trialTemplate) {
+          providerMetadata.twilioTrialTemplate = trialTemplate;
+        }
+        if (twilioRes.ok && twilioJson.sid) {
+          providerMetadata.twilioHttpStatus = twilioRes.status;
+          providerMetadata.twilioMessageSid = twilioJson.sid;
+          providerMetadata.twilioStatus = twilioJson.status;
+          // Do not mark queued/accepted/sent as delivered without explicit delivery confirmation
+          status = twilioJson.status === 'delivered' ? 'delivered' : 'queued';
+        } else {
+          status = 'failed';
+          providerMetadata.twilioHttpStatus = twilioRes.status;
+          providerMetadata.twilioErrorCode = twilioJson.code;
+          providerMetadata.twilioErrorMessage = twilioJson.message || `HTTP ${twilioRes.status}`;
+        }
+      } catch (err: unknown) {
+        status = 'failed';
+        providerMetadata.provider = 'twilio_sandbox';
+        providerMetadata.twilioErrorMessage =
+          err instanceof Error ? err.message : 'Twilio sandbox request failed';
       }
     }
 
@@ -167,7 +196,7 @@ export class NotificationService {
         template,
         status,
         attempts,
-        JSON.stringify(data),
+        JSON.stringify(providerMetadata),
       ]
     );
 

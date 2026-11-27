@@ -31,10 +31,15 @@ export class StripeSandboxAdapter {
   public static isConfigured(): boolean {
     const key = this.secretKey;
     if (!key) return false;
-    if (key.startsWith('sk_live_') || key.startsWith('rk_live_')) {
+    if (
+      key.startsWith('sk_live_') ||
+      key.startsWith('rk_live_') ||
+      key.startsWith('rkcs_live_') ||
+      key.startsWith('pk_live_')
+    ) {
       throw new Error('SECURITY VIOLATION: Live Stripe keys are strictly forbidden in FinCore sandbox.');
     }
-    return key.startsWith('sk_test_');
+    return key.startsWith('sk_test_') || key.startsWith('rk_test_') || key.startsWith('rkcs_test_');
   }
 
   /**
@@ -58,7 +63,6 @@ export class StripeSandboxAdapter {
     const body = new URLSearchParams({
       amount: String(amountCents),
       currency: params.currency.toLowerCase(),
-      'payment_method_types[]': 'card',
     });
 
     if (params.description) {
