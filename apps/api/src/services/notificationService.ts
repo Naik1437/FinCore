@@ -91,7 +91,7 @@ export class NotificationService {
     const body = rendered.body;
 
     let attempts = 0;
-    let status: 'delivered' | 'failed' = 'delivered';
+    let status: 'queued' | 'delivered' | 'failed' = 'delivered';
 
     // Simulate transmission attempts & retries
     while (attempts < maxRetries) {
