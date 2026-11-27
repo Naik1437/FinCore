@@ -11,6 +11,16 @@ The optional HTTPS Nginx profile requires these local-only files under `docker/c
 - `gate_map.conf` mapping the HttpOnly cookie value to `1`.
 - `gate_set_cookie.conf` issuing the matching Secure, HttpOnly cookie.
 
+Generate them with `bash scripts/setup_demo_gate.sh`. The script requires `htpasswd`
+from `apache2-utils`, uses bcrypt cost 12, generates a random cookie value, applies
+restrictive permissions, and does not print either secret. Do not use `openssl passwd`
+or a SHA-1 hash for the gate.
+
+On Windows, run the script from Git Bash or WSL. If using Docker tooling instead,
+provide `htpasswd` through a local Apache HTTPD image, write the generated `.htpasswd`
+and cookie include files only into the ignored `docker/certs/` directory, then run
+`docker exec fincore-nginx nginx -t` and `docker exec fincore-nginx nginx -s reload`.
+
 These files are intentionally git-ignored. Create or provision them before starting
 the `https` Compose profile; never commit the credentials, cookie value, private key,
 or certificate. The `/_gate` endpoint must be challenged with Basic Auth before it
@@ -100,9 +110,15 @@ Record the incident in `docs/FINANCIAL_CHANGE_AUDIT.md` with:
 - Local Docker HTTPS and authenticated demo access verified.
 - Temporary Cloudflare HTTPS demonstration completed; tunnel stopped.
 - Permanent cloud hosting and trusted origin TLS remain pending.
-- Demo gate currently uses a temporary SHA-1 password hash for local testing; replace with bcrypt before public exposure.
-- Stripe and Twilio external dispatch disabled for public demo safety.
+- The demo gate must be provisioned with `scripts/setup_demo_gate.sh`; bcrypt setup is
+  required before any public exposure.
+- Stripe and Twilio external dispatch require evaluator-controlled sandbox credentials;
+  repository fallback providers are simulations only.
 - Stripe webhook verification used a locally generated signed event.
 - Twilio trial accepted the notification; final delivery remains unverified.
 - Previously exposed provider credentials require rotation before reuse.
-- Production deployment and zero-downtime operation are not independently verified.
+- Production deployment, approval, rollback execution, monitoring and zero-downtime
+  operation are not independently verified.
+- Real deployment validation can be executed with `scripts/verify_staging.sh` and
+  `scripts/verify_rollback.sh` when protected environment URLs and release versions
+  are supplied.

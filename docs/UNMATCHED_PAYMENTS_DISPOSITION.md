@@ -60,3 +60,11 @@ SELECT entry_type, COUNT(*), SUM(amount) FROM ledger_entries GROUP BY entry_type
 -- Equilibrium Variance: 0.00000000
 ```
 All historical data is preserved 100% intact with complete provenance.
+
+## 5. Final Review Status
+
+This disposition is a review artifact, not a database mutation. Before submission,
+the evaluator should rerun the reconciliation query against an isolated read-only
+copy, confirm that every compensating entry has an audit reference, and separately
+retain the unmatched webhook IDs in suspense. No record should be deleted, rewritten,
+or balanced by an unsupported fabricated counterparty entry.

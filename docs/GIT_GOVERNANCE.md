@@ -81,3 +81,21 @@ FinCore uses Semantic Versioning (`MAJOR.MINOR.PATCH`):
 ```bash
 git tag -a v1.0.0 -m "Release v1.0.0: FinCore Production Ready Financial Stack (Assessments 01-10)"
 ```
+
+### Release and Hotfix Evidence
+
+Before creating a release tag, record the commit SHA, successful CI run URL, migration
+review sign-offs, ledger reconciliation result, dependency scan result, and generated
+artifact checksums. Verify the tag points to the reviewed commit:
+
+```bash
+git fetch --tags origin
+git show --no-patch --decorate <tag>
+git rev-parse <tag>^{commit}
+```
+
+For a financial hotfix, branch from the deployed tag, make the smallest change, add a
+regression test, obtain both required approvals, run the full CI workflow, and merge
+through the protected release path. Record rollback to the prior tag and the
+post-deployment reconciliation result. A local or simulated deployment is not release
+evidence.
