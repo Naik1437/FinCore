@@ -72,6 +72,7 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - DEMO_PERSONAS_ENABLED=${DEMO_PERSONAS_ENABLED:-false}
       - PORT=4000
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -119,6 +120,7 @@ services:
       retries: 3
     environment:
       - NODE_ENV=production
+      - DEMO_PERSONAS_ENABLED=${DEMO_PERSONAS_ENABLED:-false}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=fincore

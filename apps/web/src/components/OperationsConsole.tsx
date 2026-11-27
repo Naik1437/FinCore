@@ -2,19 +2,34 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import type { Dispute, DisputeStatus, LedgerEntry, OperationsSummary, Transaction } from '../types';
+import type {
+  Dispute,
+  DisputeStatus,
+  LedgerEntry,
+  OperationsSummary,
+  Transaction,
+  User,
+} from '../types';
 
 interface OperationsConsoleProps {
+  currentUser?: User | null;
   onRefreshNeeded?: () => void;
 }
 
-export function OperationsConsole({ onRefreshNeeded }: OperationsConsoleProps) {
+export function OperationsConsole({ currentUser, onRefreshNeeded }: OperationsConsoleProps) {
+  const isSupport = currentUser?.role === 'support_agent';
+  const canViewOperationsFeeds =
+    !currentUser ||
+    currentUser.role === 'operations_analyst' ||
+    currentUser?.role === 'finance_administrator' ||
+    currentUser?.role === 'platform_administrator' ||
+    currentUser?.role === 'operations';
   const [summary, setSummary] = useState<OperationsSummary | null>(null);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'disputes' | 'transactions' | 'ledger'>(
-    'overview'
+    isSupport ? 'disputes' : 'overview'
   );
 
   const [loading, setLoading] = useState(true);
@@ -26,33 +41,48 @@ export function OperationsConsole({ onRefreshNeeded }: OperationsConsoleProps) {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [resolving, setResolving] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const loadData = async () => {
-    if (loading && summary) return;
+    if (loading && hasLoaded) return;
     setLoading(true);
     setError(null);
-    try {
-      const [sumData, dispData, txData, ledgData] = await Promise.all([
-        api.getOperationsSummary(),
-        api.getDisputes(),
-        api.getTransactions(),
-        api.getLedgerEntries(),
-      ]);
+    const errors: string[] = [];
+    const disputeResult = await api.getDisputes().catch(err => {
+      errors.push(err instanceof Error ? err.message : 'Failed to load disputes.');
+      return null;
+    });
+    if (disputeResult) setDisputes(disputeResult);
 
-      setSummary(sumData);
-      setDisputes(dispData);
-      setTransactions(txData);
-      setLedgerEntries(ledgData);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load operations data.');
-    } finally {
-      setLoading(false);
+    if (canViewOperationsFeeds) {
+      const [sumResult, txResult, ledgerResult] = await Promise.all([
+        api.getOperationsSummary().catch(err => {
+          errors.push(err instanceof Error ? err.message : 'Failed to load operations summary.');
+          return null;
+        }),
+        api.getTransactions().catch(err => {
+          errors.push(err instanceof Error ? err.message : 'Failed to load transactions.');
+          return null;
+        }),
+        api.getLedgerEntries().catch(err => {
+          errors.push(err instanceof Error ? err.message : 'Failed to load ledger entries.');
+          return null;
+        }),
+      ]);
+      if (sumResult) setSummary(sumResult);
+      if (txResult) setTransactions(txResult);
+      if (ledgerResult) setLedgerEntries(ledgerResult);
     }
+
+    setHasLoaded(true);
+    setLoading(false);
+    if (errors.length > 0) setError(errors.join(' '));
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isSupport) setActiveTab('disputes');
+    void loadData();
+  }, [currentUser?.role]);
 
   const handleResolveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,14 +144,14 @@ export function OperationsConsole({ onRefreshNeeded }: OperationsConsoleProps) {
             verification.
           </p>
         </div>
-        <button
+        {!isSupport && <button
           className="btn btn-secondary"
           onClick={loadData}
           disabled={loading}
           style={{ fontSize: '0.85rem' }}
         >
           🔄 Refresh Feeds
-        </button>
+        </button>}
       </div>
 
       {actionSuccess && (
@@ -181,13 +211,13 @@ export function OperationsConsole({ onRefreshNeeded }: OperationsConsoleProps) {
           marginBottom: '1.25rem',
         }}
       >
-        <button
+        {!isSupport && <button
           className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('overview')}
           style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
         >
           📊 System Metrics
-        </button>
+        </button>}
         <button
           className={`btn ${activeTab === 'disputes' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('disputes')}
@@ -195,30 +225,30 @@ export function OperationsConsole({ onRefreshNeeded }: OperationsConsoleProps) {
         >
           ⚖️ Dispute Escalations ({openDisputeCount})
         </button>
-        <button
+        {!isSupport && <button
           className={`btn ${activeTab === 'transactions' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('transactions')}
           style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
         >
           💳 Global Transactions ({transactions.length})
-        </button>
-        <button
+        </button>}
+        {!isSupport && <button
           className={`btn ${activeTab === 'ledger' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('ledger')}
           style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
         >
           📖 Ledger Entries ({ledgerEntries.length})
-        </button>
+        </button>}
       </div>
 
-      {loading && !summary ? (
+      {loading && !hasLoaded ? (
         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
           Loading operational telemetry...
         </div>
       ) : (
         <>
           {/* TAB 1: OVERVIEW METRICS */}
-          {activeTab === 'overview' && summary && (
+          {activeTab === 'overview' && !isSupport && summary && (
             <div>
               <div className="grid grid-3" style={{ marginBottom: '1.5rem' }}>
                 <div

@@ -27,11 +27,17 @@ apiRouter.use(authenticateToken);
 
 const finance = requireRole('finance_administrator', 'platform_administrator');
 const operations = requireRole('operations', 'finance_administrator', 'platform_administrator');
+const disputeOperations = requireRole(
+  'support_agent',
+  'operations_analyst',
+  'finance_administrator',
+  'platform_administrator'
+);
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/holds', requireAuth, finance);
 apiRouter.use('/accounts', requireAuth, operations);
-apiRouter.patch('/disputes/:id', requireAuth, operations);
+apiRouter.patch('/disputes/:id', requireAuth, disputeOperations);
 apiRouter.get('/reports/summary', requireAuth, operations);
 apiRouter.use('/reports/risk', requireAuth, operations);
 apiRouter.post('/transactions', requireAuth, finance);

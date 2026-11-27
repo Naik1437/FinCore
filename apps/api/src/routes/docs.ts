@@ -23,17 +23,48 @@ docsRouter.get('/openapi.json', (_req: Request, res: Response) => {
   }
 });
 
-// Self-contained Swagger UI HTML without external build tools or paid CDNs
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>\"']/g, character => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character];
+  });
+}
+
+// CSP-safe server-rendered API documentation. No CDN or inline JavaScript is required.
 docsRouter.get('/', (_req: Request, res: Response) => {
+  if (!fs.existsSync(openApiPath)) {
+    res.status(404).send('OpenAPI specification not found');
+    return;
+  }
+
+  const spec = JSON.parse(fs.readFileSync(openApiPath, 'utf8')) as {
+    info?: { title?: string; version?: string; description?: string };
+    paths?: Record<string, Record<string, { summary?: string; description?: string }>>;
+  };
+  const endpointMarkup = Object.entries(spec.paths || {})
+    .flatMap(([route, methods]) =>
+      Object.entries(methods).map(([method, operation]) => `
+        <article class="endpoint">
+          <div><span class="method method-${escapeHtml(method)}">${escapeHtml(method.toUpperCase())}</span>
+          <code>${escapeHtml(route)}</code></div>
+          <p>${escapeHtml(operation.summary || operation.description || 'API operation')}</p>
+        </article>`)
+    )
+    .join('');
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FinCore API Documentation - Swagger UI</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css" />
+  <title>${escapeHtml(spec.info?.title || 'FinCore API Documentation')}</title>
   <style>
     body { margin: 0; padding: 0; background: #fafafa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .topbar { display: none !important; }
     .fincore-header {
       background: #0f172a;
       color: #fff;
@@ -52,6 +83,13 @@ docsRouter.get('/', (_req: Request, res: Response) => {
       font-size: 12px;
       font-weight: 500;
     }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 32px 48px; }
+    .endpoint { background: #fff; border: 1px solid #dbe3ef; border-radius: 6px; margin: 12px 0; padding: 14px 18px; }
+    .endpoint code { font-size: 15px; color: #172033; }
+    .endpoint p { color: #475569; margin: 8px 0 0; }
+    .method { display: inline-block; min-width: 64px; margin-right: 12px; padding: 4px 7px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+    .method-get { background: #16803c; } .method-post { background: #1769aa; } .method-patch { background: #9a6700; }
+    .method-put { background: #8250df; } .method-delete { background: #cf222e; }
   </style>
 </head>
 <body>
@@ -59,22 +97,12 @@ docsRouter.get('/', (_req: Request, res: Response) => {
     <h1>💳 FinCore Core Banking & Financial API</h1>
     <span class="fincore-badge">OpenAPI 3.0.3</span>
   </div>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
-  <script>
-    window.onload = function() {
-      SwaggerUIBundle({
-        url: "/docs/openapi.json",
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: [
-          SwaggerUIBundle.presets.apis,
-          SwaggerUIBundle.SwaggerUIStandalonePreset
-        ],
-        layout: "BaseLayout"
-      });
-    };
-  </script>
+  <main>
+    <h2>${escapeHtml(spec.info?.title || 'FinCore API')}</h2>
+    <p>${escapeHtml(spec.info?.description || 'OpenAPI endpoint reference')}</p>
+    <p>Version ${escapeHtml(spec.info?.version || 'unknown')} · Raw specification: <a href="/docs/openapi.json">/docs/openapi.json</a></p>
+    ${endpointMarkup}
+  </main>
 </body>
 </html>`;
   res.setHeader('Content-Type', 'text/html');

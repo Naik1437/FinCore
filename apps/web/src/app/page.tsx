@@ -32,7 +32,13 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (userOverride?: User | null) => {
+    const user = userOverride ?? currentUser;
+    if (user && user.role !== 'customer') {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -61,7 +67,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     void fetchData();
@@ -102,14 +108,14 @@ export default function Home() {
             setRole('customer');
             setActiveTab('overview');
           }
-          void fetchData();
+          if (user.role === 'customer') void fetchData(user);
         }}
         onLogout={() => {
           void api.logout();
           setCurrentUser(null);
           setRole('customer');
           setActiveTab('overview');
-          void fetchData();
+          void fetchData(null);
         }}
       />
 
@@ -140,7 +146,7 @@ export default function Home() {
 
         {/* OPERATIONS VIEW */}
         {role === 'operations' || activeTab === 'operations' ? (
-          <OperationsConsole onRefreshNeeded={fetchData} />
+          <OperationsConsole currentUser={currentUser} onRefreshNeeded={fetchData} />
         ) : (
           /* CUSTOMER VIEW */
           <div>

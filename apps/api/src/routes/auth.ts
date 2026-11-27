@@ -233,7 +233,12 @@ authRouter.post('/login', authLimiter, async (req: Request, res: Response) => {
 
   const { email, password } = parseResult.data;
 
-  if (process.env.NODE_ENV === 'production' && email.endsWith('@fincore.internal')) {
+  const demoPersonasEnabled = process.env.DEMO_PERSONAS_ENABLED === 'true';
+  if (
+    process.env.NODE_ENV === 'production' &&
+    email.endsWith('@fincore.internal') &&
+    !demoPersonasEnabled
+  ) {
     res.status(403).json({
       error: 'Forbidden',
       message: 'Demo persona accounts are restricted in production environments',
